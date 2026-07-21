@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PICK ME PICK ME UP! 洪嘉豪歌曲二選一</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ background:#fff;
+ color:#333;
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+#app{
+ width:100%;
+ max-width:430px;
+ min-height:100vh;
+ margin:auto;
+ padding:20px 16px 40px;
+}
+h1{
+ text-align:center;
+ color:#f57c00;
+ font-size:22px;
+ line-height:1.35;
+ margin:10px 0 22px;
+}
+.round-title{text-align:center;font-weight:700;font-size:20px}
+.progress-text{text-align:center;color:#777;margin:8px}
+.progress{height:8px;background:#eee;border-radius:20px;overflow:hidden}
+.progress-bar{height:100%;background:#ff9800}
+.back-btn{
+ border:0;background:none;color:#f57c00;font-size:16px;
+ visibility:hidden;margin-bottom:12px
+}
+.back-btn.show{visibility:visible}
+.cards{
+ display:flex;
+ gap:12px;
+ justify-content:center;
+ margin-top:22px;
+}
+.song-card{
+ width:calc(50% - 6px);
+ max-width:190px;
+ background:white;
+ border-radius:20px;
+ overflow:hidden;
+ box-shadow:0 5px 18px #00000012;
+ display:flex;
+ flex-direction:column;
+}
+.cover{
+ width:100%;
+ aspect-ratio:1/1;
+ background:#f5f5f5;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ color:#999;
+}
+.song-btn{
+ width:82%;
+ height:52px;
+ margin:14px auto;
+ padding:0 8px;
+ border-radius:30px;
+ border:2px solid #ff9800;
+ background:#fff;
+ color:#ff9800;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ text-align:center;
+ white-space:nowrap;
+ overflow:hidden;
+ line-height:1;
+}
+.song-btn.selected{
+ background:#ff9800;
+ color:white;
+ border-color:#ff9800;
+ transform:scale(0.98);
+ box-shadow:0 6px 14px rgba(255,152,0,0.35);
+}
+.pool-box{
+ border-radius:20px;
+ padding:18px;
+ margin:18px 0;
+}
+.win-box{background:#fff7e8;border:2px solid #ffb74d}
+.lose-box{background:#f5f5f5;border:2px solid #ddd}
+.pool{display:flex;flex-wrap:wrap;gap:10px}
+.pool span{
+ padding:8px 14px;
+ border-radius:20px;
+ background:#fff;
+ color:#f57c00;
+ font-size:14px;
+}
+.lose span{color:#888}
+.next-btn{
+ width:100%;
+ padding:14px;
+ border:0;
+ border-radius:30px;
+ background:#ff9800;
+ color:#fff;
+ font-size:16px;
+}
+.final-three{
+ display:grid;
+ grid-template-columns:repeat(2, minmax(0, 1fr));
+ gap:22px;
+ padding:10px 20px;
+}
+
+.final-three .song-card{
+ width:100%;
+ max-width:none;
+}
+
+.final-three .song-card:nth-child(3){
+ grid-column:1 / 3;
+ justify-self:center;
+ width:calc(50% - 6px);
+}
+
+.final-three .cover{
+ aspect-ratio:1 / 1;
+}
+
+.final-three .song-btn{
+ height:56px;
+ width:88%;
+ margin:14px auto;
+ padding:0 10px;
+ font-size:14px;
+ white-space:nowrap;
+ overflow:hidden;
+ text-overflow:ellipsis;
+}
+
+.final-card{
+ margin:30px auto;
+ width:300px;
+ text-align:center;
+ border-radius:20px;
+ padding:18px;
+ box-shadow:0 5px 20px #0002;
+}
+
+.final-card h2{
+ margin:20px auto 8px;
+ width:75%;
+ line-height:1.1;
+ white-space:nowrap;
+ overflow:hidden;
+ text-overflow:clip;
+ letter-spacing:-0.5px;
+ text-align:center;
+}
+
+.final-cover{
+ aspect-ratio:1;
+ background:#f5f5f5;
+ border-radius:16px;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ color:#999;
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const app=document.getElementById("app");
+
+const songs=[
+"拍下愛","不留","半天空檔","表情符號","掉進海的眼淚","好奇殺死愛",
+"龜兔之愛","十號儲物櫃","我說不可以","自問自答","曲線型戀情",
+"窮小子","謎之微笑","逆時車站","主角光環","及時行樂","活人鏢靶",
+"救","防火門","我懂","24/7戀人","這天那天某天","污糟兒",
+"還原淚","活誰的命","海邊的呀豪","隨波逐流","My Secret Park",
+"洗面","只要你不尴尬","黑玻璃","Truth or Dare","衰仔樂園",
+"逆便所","漫天星","拆禮物的孩子","預言家","明星示範生",
+"離永遠只差一點","拜託","跟你分擔失落比較快樂","閃光",
+"親愛的","下世愛你","被害妄想","畜生","穿波鞋的惡魔","一筆滿意"
+];
+
+let state={
+ pool:[],
+ pairs:[],
+ index:0,
+ wins:[],
+ loses:[],
+ round:1,
+ final:null,
+ history:[],
+ selected:null,
+ tempSelected:null
+};
+
+function shuffle(a){return [...a].sort(()=>Math.random()-0.5)}
+
+function start(){
+ state.pool=shuffle(songs);
+ state.round=1;
+ state.wins=[];
+ state.loses=[];
+ createPairs();
+ render();
+}
+
+function createPairs(){
+ state.pairs=[];
+ for(let i=0;i<state.pool.length;i+=2){
+  if(state.pool[i+1]) state.pairs.push([state.pool[i],state.pool[i+1]]);
+ }
+ state.index=0;
+}
+
+function fontSize(name){
+ let size=16;
+ const max=140;
+ const c=document.createElement("canvas");
+ const ctx=c.getContext("2d");
+ while(size>10){
+  ctx.font=size+"px -apple-system";
+  if(ctx.measureText(name).width<=max) break;
+  size--;
+ }
+ return size+"px";
+}
+
+function choose(song){
+ const pair=state.pairs[state.index];
+ const lose=pair[0]===song?pair[1]:pair[0];
+
+ // 点击后先展示选中状态
+ state.tempSelected=song;
+ render();
+
+ setTimeout(()=>{
+   const old=state.history.find(h=>h.round===state.round && h.index===state.index);
+
+   // 如果当前题已有选择，替换原来的结果
+   if(old){
+     const oldWinIndex=state.wins.indexOf(old.selected);
+     const oldLoseIndex=state.loses.indexOf(old.selected===pair[0]?pair[1]:pair[0]);
+     if(oldWinIndex>-1) state.wins.splice(oldWinIndex,1);
+     if(oldLoseIndex>-1) state.loses.splice(oldLoseIndex,1);
+   }
+
+   state.history=state.history.filter(h=>!(h.round===state.round && h.index===state.index));
+
+   state.history.push({
+     round:state.round,
+     index:state.index,
+     pair:[...pair],
+     selected:song
+   });
+
+   state.wins[state.index]=song;
+   state.loses[state.index]=lose;
+
+   state.tempSelected=null;
+   state.index++;
+
+   if(state.index>=state.pairs.length){
+    if(state.wins.length===3) finalThree();
+    else result();
+   }else{
+    render();
+   }
+ },300);
+}
+
+function backQuestion(){
+ if(state.index<=0) return;
+
+ const targetIndex=state.index-1;
+ const target=state.history.find(h=>h.round===state.round && h.index===targetIndex);
+
+ state.index=targetIndex;
+
+ if(target){
+   state.tempSelected=target.selected;
+   state.selected=target.selected;
+ }else{
+   state.tempSelected=null;
+   state.selected=null;
+ }
+
+ render();
+}
+
+
+function render(){
+ const pair=state.pairs[state.index];
+ const selectedHistory = state.history.find(h=>h.round===state.round && h.index===state.index);
+ const selectedSong = state.tempSelected || (selectedHistory ? selectedHistory.selected : null);
+ app.innerHTML=`
+ <h1>PICK ME PICK ME UP!<br>洪嘉豪歌曲二選一</h1>
+ <button class="back-btn ${state.index>0 ? "show" : ""}" onclick="backQuestion()">← 返回上一題</button>
+ <div class="round-title">第${state.round}輪</div>
+ <div class="progress-text">${state.index+1}/${state.pairs.length}</div>
+ <div class="progress"><div class="progress-bar" style="width:${state.index/state.pairs.length*100}%"></div></div>
+ <div class="cards">${pair.map(s=>`
+ <div class="song-card">
+ <div class="cover">封面</div>
+ <button class="song-btn ${selectedSong===s ? "selected" : ""}" style="font-size:${fontSize(s)}" onclick="choose('${s}')">${s}</button>
+ </div>`).join("")}</div>`;
+}
+
+function result(){
+ app.innerHTML=`
+ <h1>PICK ME PICK ME UP!<br>洪嘉豪歌曲二選一</h1>
+ <div class="round-title">第${state.round}輪完成</div>
+ <h3>晉級池</h3>
+ <div class="pool-box win-box"><div class="pool">${state.wins.map(x=>`<span>${x}</span>`).join("")}</div></div>
+ <h3>淘汰池</h3>
+ <div class="pool-box lose-box"><div class="pool lose">${state.loses.map(x=>`<span>${x}</span>`).join("")}</div></div>
+ <button class="next-btn" onclick="next()">進入下一輪</button>`;
+}
+
+function next(){
+ state.pool=[...state.wins];
+ state.wins=[];
+ state.loses=[];
+ state.round++;
+ createPairs();
+ render();
+}
+
+function finalThree(){
+ app.innerHTML=`
+ <h1>最後三強</h1>
+ <div class="cards final-three">${state.wins.map(x=>`
+ <div class="song-card">
+ <div class="cover">封面</div>
+ <button class="song-btn" style="font-size:${fontSize(x)}" onclick="finish('${x}')">${x}</button>
+ </div>`).join("")}</div>`;
+}
+
+function finish(x){
+ app.innerHTML=`
+ <h1>你的洪曲TOP1是</h1>
+ <div class="final-card">
+ <div class="final-cover">封面</div>
+ <h2 id="winner-title">${x}</h2>
+ </div>`;
+
+ const title=document.getElementById("winner-title");
+ let size=38;
+ title.style.fontSize=size+"px";
+ while(title.scrollWidth>title.clientWidth && size>18){
+   size--;
+   title.style.fontSize=size+"px";
+ }
+}
+
+start();
+</script>
+</body>
+</html>
